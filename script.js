@@ -107,6 +107,53 @@ function minutesTo24(mins){
 function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
 function snapMinutes(mins){ return Math.round(mins/SNAP)*SNAP; }
 
+// ---- Overlap / collision helpers ----
+function rangesOverlap(aStart, aEnd, bStart, bEnd){
+    return aStart < bEnd && bStart < aEnd;
+}
+// Returns tasks on `day` that overlap [start,end), excluding any id in excludeIds
+function findOverlaps(day, start, end, excludeIds){
+    const exclude = new Set(excludeIds || []);
+    return tasks.filter(t => t.day===day && !exclude.has(t.id) && rangesOverlap(start, end, t.start, t.end));
+}
+
+// Injects the CSS needed for the "blocked" flash feedback, since it isn't in the stylesheet
+function injectConflictStyles(){
+    if(document.getElementById('conflict-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'conflict-styles';
+    style.textContent =
+        '.task.conflict{outline:2px dashed #e4362b !important;box-shadow:0 0 0 3px rgba(228,54,43,0.25) !important;}' +
+        '#conflictMsg{display:none;color:#8a231b;background:#fbe4e1;border:1px solid #e4362b;' +
+        'padding:8px 10px;border-radius:6px;font-size:13px;margin:8px 0;line-height:1.4;}';
+    document.head.appendChild(style);
+}
+injectConflictStyles();
+
+function ensureConflictMsgEl(){
+    let el = document.getElementById('conflictMsg');
+    if(!el){
+        el = document.createElement('div');
+        el.id = 'conflictMsg';
+        const saveBtn = document.getElementById('saveBtn');
+        if(saveBtn && saveBtn.parentElement){
+            saveBtn.parentElement.insertBefore(el, saveBtn);
+        } else {
+            document.body.appendChild(el);
+        }
+    }
+    return el;
+}
+function showConflictError(msg){
+    const el = ensureConflictMsgEl();
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+function clearConflictError(){
+    const el = document.getElementById('conflictMsg');
+    if(el) el.style.display = 'none';
+}
+
 const gridEl = document.getElementById('grid');
 
 function buildGrid(){
@@ -238,6 +285,12 @@ function attachCardInteractions(el, task){
     let currentBody = null;
     let moved = false;
 
+    // Tracks the last position that was confirmed conflict-free, so a
+    // fully-blocked drag "sticks" there instead of overlapping another task.
+    let lastGoodTop = 0;
+    let lastGoodBody = null;
+    let conflictFlashTimer = null;
+
     const del = el.querySelector('.del-x');
     del.addEventListener('pointerdown', e => e.stopPropagation());
     del.addEventListener('click', e => { e.stopPropagation(); deleteTaskFlow(task); });
@@ -253,26 +306,80 @@ function attachCardInteractions(el, task){
     if(mode === 'move') {
         const under = document.elementFromPoint(e.clientX, e.clientY);
         const body = under ? under.closest('.day-body') : null;
-        
+
         if(body && body !== currentBody){
         document.querySelectorAll('.day-col').forEach(c => c.classList.remove('drop-hover'));
         body.closest('.day-col').classList.add('drop-hover');
         }
-        
-        const targetBody = body || currentBody;
-        let newTop = startTop + dy;
-        newTop = clamp(newTop, 0, totalHeight - parseFloat(el.style.height));
-        
-        // Reparenting here no longer breaks the drag
-        if(targetBody !== el.parentElement){
-        targetBody.appendChild(el);
+
+        const targetBody = body || lastGoodBody;
+        const targetDay = parseInt(targetBody.dataset.day, 10);
+        const heightPx = parseFloat(el.style.height);
+        const heightMin = heightPx/ROW_H*60;
+
+        let rawTop = clamp(startTop + dy, 0, totalHeight - heightPx);
+        let startMin = clamp(snapMinutes(START_HOUR*60 + rawTop/ROW_H*60), START_HOUR*60, END_HOUR*60 - heightMin);
+        let endMin = startMin + heightMin;
+
+        const others = tasks.filter(t => t.day===targetDay && t.id!==task.id);
+        let conflicts = others.filter(t=>rangesOverlap(startMin, endMin, t.start, t.end));
+
+        if(conflicts.length){
+        // Magnetic snap: try to latch onto the nearest free edge of whatever it's overlapping
+        let bestStart = null, bestDist = Infinity;
+        conflicts.forEach(c=>{
+            const afterStart = c.end, afterEnd = afterStart + heightMin;
+            if(afterEnd <= END_HOUR*60 && !others.some(t=>rangesOverlap(afterStart, afterEnd, t.start, t.end))){
+            const dist = Math.abs(afterStart - startMin);
+            if(dist < bestDist){ bestDist = dist; bestStart = afterStart; }
+            }
+            const beforeEnd = c.start, beforeStart = beforeEnd - heightMin;
+            if(beforeStart >= START_HOUR*60 && !others.some(t=>rangesOverlap(beforeStart, beforeEnd, t.start, t.end))){
+            const dist = Math.abs(beforeStart - startMin);
+            if(dist < bestDist){ bestDist = dist; bestStart = beforeStart; }
+            }
+        });
+        if(bestStart !== null){
+            startMin = snapMinutes(bestStart);
+            endMin = startMin + heightMin;
+            conflicts = others.filter(t=>rangesOverlap(startMin, endMin, t.start, t.end));
         }
-        el.style.top = newTop + 'px';
+        }
+
+        if(conflicts.length){
+        // No free spot near the cursor — snap back to the last valid spot and flash red
+        el.classList.add('conflict');
+        clearTimeout(conflictFlashTimer);
+        conflictFlashTimer = setTimeout(()=>el.classList.remove('conflict'), 180);
+        if(el.parentElement !== lastGoodBody) lastGoodBody.appendChild(el);
+        el.style.top = lastGoodTop + 'px';
+        } else {
+        el.classList.remove('conflict');
+        const newTopPx = (startMin - START_HOUR*60)/60*ROW_H;
+        if(targetBody !== el.parentElement) targetBody.appendChild(el);
+        el.style.top = newTopPx + 'px';
+        lastGoodTop = newTopPx;
+        lastGoodBody = targetBody;
+        }
 
     } else if(mode === 'resize') {
+        const topMin = snapMinutes(START_HOUR*60 + parseFloat(el.style.top)/ROW_H*60);
         let newHeight = startHeight + dy;
         newHeight = clamp(newHeight, SNAP/60*ROW_H, totalHeight - parseFloat(el.style.top));
-        el.style.height = newHeight + 'px';
+        let heightMin = snapMinutes(newHeight/ROW_H*60);
+        let endMin = topMin + heightMin;
+
+        // Magnetically stop the resize right at the start of the next task on this day
+        const day = parseInt(el.parentElement.dataset.day, 10);
+        const nextBlocker = tasks
+        .filter(t => t.day===day && t.id!==task.id && t.start >= topMin)
+        .sort((a,b)=>a.start-b.start)[0];
+        if(nextBlocker && endMin > nextBlocker.start){
+        endMin = nextBlocker.start;
+        heightMin = Math.max(SNAP, endMin - topMin);
+        newHeight = heightMin/60*ROW_H;
+        }
+        el.style.height = Math.max(newHeight, SNAP/60*ROW_H) + 'px';
     }
     }
 
@@ -280,6 +387,7 @@ function attachCardInteractions(el, task){
     function onPointerUp(e) {
     if(!mode) return;
     document.querySelectorAll('.day-col').forEach(c => c.classList.remove('drop-hover'));
+    el.classList.remove('conflict');
 
     if(moved) recordHistory();
 
@@ -323,6 +431,8 @@ function attachCardInteractions(el, task){
     startY = e.clientY; startX = e.clientX;
     startTop = parseFloat(el.style.top);
     currentBody = el.parentElement;
+    lastGoodTop = startTop;
+    lastGoodBody = currentBody;
     el.classList.add('dragging');
     
     // Bind globally instead of using setPointerCapture
