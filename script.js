@@ -92,7 +92,7 @@ function buildGrid(){
     lbl.className = 'time-label';
     const idx = document.createElement('div');
     idx.className = 'idx';
-    idx.textContent = String(h-START_HOUR+1).padStart(2,'0');
+    // idx.textContent = String(h-START_HOUR+1).padStart(2,'0');
     const clock = document.createElement('div');
     clock.className = 'clock';
     clock.textContent = minutesTo24(h*60);
@@ -112,7 +112,7 @@ function buildGrid(){
 
     const head = document.createElement('div');
     head.className = 'day-head' + (idx===todayIdx ? ' is-today':'');
-    head.innerHTML = '<div class="num">'+String(idx+1).padStart(2,'0')+'</div><div class="name">'+d+'</div>';
+    head.innerHTML = '<div class="num">'+'</div><div class="name">'+d+'</div>';
     col.appendChild(head);
 
     const body = document.createElement('div');
