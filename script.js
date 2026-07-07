@@ -1,4 +1,3 @@
-
 (function(){
 "use strict";
 
@@ -50,6 +49,37 @@ let tasks = loadTasks();
 let selectedColor = COLORS[0].id;
 let selectedDays = new Set();
 let editingTask = null;
+
+// ---- Undo / Redo history ----
+let past = [];
+let future = [];
+const HISTORY_LIMIT = 50;
+
+function snapshot(){
+    return JSON.parse(JSON.stringify(tasks));
+}
+
+function recordHistory(){
+    past.push(snapshot());
+    if(past.length > HISTORY_LIMIT) past.shift();
+    future = []; // any new action invalidates redo history
+}
+
+function undo(){
+    if(past.length === 0) return;
+    future.push(snapshot());
+    tasks = past.pop();
+    saveTasks();
+    render();
+}
+
+function redo(){
+    if(future.length === 0) return;
+    past.push(snapshot());
+    tasks = future.pop();
+    saveTasks();
+    render();
+}
 
 function loadTasks(){
     try{
@@ -251,6 +281,8 @@ function attachCardInteractions(el, task){
     if(!mode) return;
     document.querySelectorAll('.day-col').forEach(c => c.classList.remove('drop-hover'));
 
+    if(moved) recordHistory();
+
     if(mode === 'move') {
         const body = el.parentElement;
         const newDay = parseInt(body.dataset.day, 10);
@@ -385,14 +417,14 @@ function openAddModal(prefillDay, prefillStart){
 function openEditModal(task){
     editingTask = task;
     modalTitleEl.textContent = 'Edit Task';
-    dayPickerLabel.textContent = 'Day';
+    dayPickerLabel.textContent = 'Day(s) — select more days to clone this task there';
     document.getElementById('f-title').value = task.title;
     document.getElementById('f-notes').value = task.notes || '';
     selectedColor = task.color;
     selectedDays = new Set([task.day]);
     document.getElementById('f-start').value = minutesToTimeInput(task.start);
     document.getElementById('f-end').value = minutesToTimeInput(task.end);
-    buildDayPicker(false);
+    buildDayPicker(true);
     buildColorPicker();
     document.getElementById('saveBtn').textContent = 'Save';
 
@@ -401,15 +433,16 @@ function openEditModal(task){
     const delOne = document.createElement('button');
     delOne.type='button'; delOne.className='sketch-btn small danger';
     delOne.textContent = seriesCount>1 ? 'Delete this one' : 'Delete';
-    delOne.addEventListener('click', ()=>{ removeTasks([task.id]); closeModal(); });
+    delOne.addEventListener('click', ()=>{ recordHistory(); removeTasksNoHistory([task.id]); closeModal(); });
     deleteZone.appendChild(delOne);
     if(seriesCount>1){
     const delAll = document.createElement('button');
     delAll.type='button'; delAll.className='sketch-btn small danger';
     delAll.textContent = 'Delete all in series';
     delAll.addEventListener('click', ()=>{
+        recordHistory();
         const ids = tasks.filter(x=>x.groupId===task.groupId).map(x=>x.id);
-        removeTasks(ids); closeModal();
+        removeTasksNoHistory(ids); closeModal();
     });
     deleteZone.appendChild(delAll);
     seriesHint.style.display = 'block';
@@ -459,11 +492,17 @@ function openSettings(){
   render();
 }
 
-function removeTasks(ids){
+// Core removal logic without touching history (callers decide when to record)
+function removeTasksNoHistory(ids){
     const idSet = new Set(ids);
     tasks = tasks.filter(t=>!idSet.has(t.id));
     saveTasks();
     render();
+}
+
+function removeTasks(ids){
+    recordHistory();
+    removeTasksNoHistory(ids);
 }
 
 function deleteTaskFlow(task){
@@ -475,11 +514,27 @@ function deleteTaskFlow(task){
 document.getElementById('addBtn').addEventListener('click', ()=> openAddModal());
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
 overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !overlay.classList.contains('hidden')) closeModal(); });
+
+document.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape' && !overlay.classList.contains('hidden')){ closeModal(); return; }
+
+    const mod = e.ctrlKey || e.metaKey;
+    if(!mod) return;
+    const key = e.key.toLowerCase();
+
+    if(key==='z' && !e.shiftKey){
+        e.preventDefault();
+        undo();
+    } else if(key==='y' || (key==='z' && e.shiftKey)){
+        e.preventDefault();
+        redo();
+    }
+});
 
 document.getElementById('clearBtn').addEventListener('click', ()=>{
     if(tasks.length===0) return;
     if(confirm('Clear the entire board? This cannot be undone.')){
+    recordHistory();
     tasks = [];
     saveTasks();
     render();
@@ -490,6 +545,7 @@ form.addEventListener('submit', (e)=>{
     e.preventDefault();
     const title = document.getElementById('f-title').value.trim();
     if(!title) return;
+    recordHistory();
     const startStr = document.getElementById('f-start').value;
     const endStr = document.getElementById('f-end').value;
     let start = timeToMinutes(startStr);
@@ -505,9 +561,34 @@ form.addEventListener('submit', (e)=>{
     editingTask.title = title;
     editingTask.notes = notes;
     editingTask.color = selectedColor;
-    editingTask.day = days[0];
-    editingTask.start = start;
-    editingTask.end = end;
+
+    const daySet = new Set(days);
+
+    if(daySet.size > 1){
+        // give it a groupId if it doesn't already have one
+        if(!editingTask.groupId) editingTask.groupId = uuid();
+        const groupId = editingTask.groupId;
+
+        // keep the edited task on its own day if still selected, else move it to the first pick
+        if(!daySet.has(editingTask.day)) editingTask.day = days[0];
+        editingTask.start = start;
+        editingTask.end = end;
+
+        daySet.forEach(d=>{
+            if(d === editingTask.day) return;
+            const existing = tasks.find(t=>t.groupId===groupId && t.day===d);
+            if(existing){
+                // sync the clone's fields
+                Object.assign(existing, { title, notes, color: selectedColor, start, end });
+            } else {
+                tasks.push({ id: uuid(), groupId, day: d, start, end, title, notes, color: selectedColor });
+            }
+        });
+    } else {
+        editingTask.day = days[0];
+        editingTask.start = start;
+        editingTask.end = end;
+    }
     } else {
     const groupId = days.length>1 ? uuid() : null;
     days.forEach(d=>{
