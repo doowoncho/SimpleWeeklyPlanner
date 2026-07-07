@@ -1,0 +1,336 @@
+:root {
+  --paper: #fafaf7;
+  --ink: #121212;
+  --line: #121212;
+  --line-soft: #d8d6cf;
+  --red: #e4362b;
+  --blue: #1e4fd8;
+  --yellow: #f4c430;
+  --green: #1e7a4c;
+  --grey: #8c8a83;
+  --white: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: sans-serif;
+  overflow-x: hidden;
+}
+
+#app { 
+  position: relative; 
+  z-index: 1; 
+  max-width: 1440px; 
+  margin: 0 auto; 
+  padding: 32px 28px 50px; 
+}
+
+/* ---------- Header ---------- */
+.eyebrow {
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--grey); margin-bottom: 6px;
+}
+
+.banner {
+  display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+  margin-bottom: 0;
+}
+
+.banner h1 {
+  font-family: sans-serif; font-weight: 700;
+  font-size: 52px; line-height: .95; margin: 0; letter-spacing: -1px;
+}
+
+.banner h1 span { color: var(--red); }
+
+.rule { height: 4px; background: var(--ink); margin: 16px 0 0; }
+.rule.accent { height: 2px; background: var(--red); margin-top: 4px; }
+
+.toolbar { display: flex; gap: 0; align-items: stretch; margin: 20px 0 4px; flex-wrap: wrap; }
+
+button.sketch-btn {
+  font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13px; letter-spacing: 1px;
+  text-transform: uppercase;
+  background: var(--white); border: 2px solid var(--ink);
+  padding: 11px 20px; cursor: pointer; color: var(--ink);
+  border-radius: 0; margin-right: -2px;
+}
+
+button.sketch-btn:hover { background: var(--ink); color: var(--white); }
+button.sketch-btn.primary { background: var(--ink); color: var(--white); }
+button.sketch-btn.primary:hover { background: var(--red); border-color: var(--red); }
+button.sketch-btn.ghost { background: var(--white); }
+button.sketch-btn.small { font-size: 11px; padding: 6px 10px; letter-spacing: .5px; }
+button.sketch-btn.danger { border-color: var(--red); color: var(--red); }
+button.sketch-btn.danger:hover { background: var(--red); color: var(--white); }
+
+/* ---------- Legend ---------- */
+.legend {
+  display: flex; gap: 0; flex-wrap: wrap; margin: 22px 0 22px; border-left: none;
+}
+
+.legend span {
+  display: flex; align-items: center; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  letter-spacing: .5px; text-transform: uppercase; padding: 8px 14px; border-left: 2px solid var(--ink);
+}
+
+.legend i { width: 13px; height: 13px; display: inline-block; border: 1.5px solid var(--ink); }
+
+/* ---------- Grid ---------- */
+.board-wrap {
+  border: 2px solid var(--ink);
+  background: var(--white);
+  overflow: auto;
+  position: relative;
+  /* Smooth scrolling for touch devices */
+  -webkit-overflow-scrolling: touch;
+}
+
+.grid { display: flex; min-width: 860px; position: relative; }
+
+.time-gutter {
+  width: 70px; flex: 0 0 70px;
+  position: sticky; left: 0; z-index: 5;
+  background: var(--white);
+  border-right: 2px solid var(--ink);
+}
+
+.time-gutter .head-cell {
+  height: 64px; border-bottom: 2px solid var(--ink);
+  background: white;
+}
+
+.time-label {
+  position: relative; height: 56px;
+  border-bottom: 1px solid var(--line-soft);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.time-label .idx {
+  position: absolute; top: 3px; left: 5px; font-size: 9px; color: var(--red); font-weight: 600;
+}
+
+.time-label .clock {
+  position: absolute; bottom: 3px; left: 5px; font-size: 12px; font-weight: 500; color: var(--ink);
+}
+
+.day-col { flex: 1 1 0; min-width: 108px; position: relative; border-right: 1px solid var(--line-soft); }
+.day-col:last-child { border-right: none; }
+
+.day-head {
+  height: 64px; border-bottom: 2px solid var(--ink);
+  background: var(--white);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: sticky; top: 0; z-index: 4;
+}
+
+.day-head .num {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--grey); letter-spacing: 1px;
+}
+
+.day-head .name {
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: .5px;
+  text-transform: uppercase;
+}
+
+.day-head.is-today { background: var(--ink); }
+.day-head.is-today .num { color: var(--red); }
+.day-head.is-today .name { color: var(--white); }
+
+.day-body {
+  position: relative;
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0, transparent 55px, var(--line-soft) 56px),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 27px, #edece6 28px);
+  background-size: 100% 56px, 100% 28px;
+}
+
+.day-col.drop-hover .day-body { background-color: rgba(228,54,43,.05); }
+
+.now-line { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid var(--red); z-index: 3; pointer-events: none; }
+.now-line::before {
+  content: "NOW"; position: absolute; left: 0; top: -9px; font-size: 9px; letter-spacing: 1px;
+  color: var(--white); background: var(--red); padding: 0 5px; font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ---------- Task card ---------- */
+.task {
+  position: absolute; left: 2px; right: 2px;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  padding: 6px 8px 4px;
+  overflow: hidden; cursor: grab; user-select: none;
+  z-index: 2;
+}
+
+.task:active { cursor: grabbing; }
+.task.dragging { opacity: .88; z-index: 20; box-shadow: 5px 5px 0 rgba(0,0,0,.25); }
+
+.task .idx-tag {
+  position: absolute; top: 0; left: 0; font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600;
+  background: var(--ink); color: var(--white); padding: 1px 4px;
+}
+
+.task .t-title {
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: .2px;
+  line-height: 1.15; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-right: 14px; margin-top: 2px;
+}
+
+.task .t-time { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; opacity: .85; margin-top: 2px; }
+.task .t-notes { font-family: 'Inter', sans-serif; font-size: 11px; opacity: .85; margin-top: 3px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.task .resize-handle { position: absolute; left: 0; right: 0; bottom: 0; height: 9px; cursor: ns-resize; }
+.task .resize-handle::after {
+  content: "˙ ˙ ˙"; position: absolute; left: 50%; bottom: -3px; transform: translateX(-50%);
+  font-size: 10px; letter-spacing: 2px; opacity: .6;
+}
+
+.task .del-x {
+  position: absolute; top: 1px; right: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  line-height: 1; cursor: pointer; width: 16px; height: 16px; text-align: center; opacity: .55;
+}
+
+.task .del-x:hover { opacity: 1; }
+
+.empty-hint {
+  position: absolute; top: 14px; left: 0; right: 0; text-align: center;
+  color: var(--grey); font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; letter-spacing: .5px;
+  pointer-events: none;
+}
+
+/* ---------- Modal ---------- */
+.modal-overlay { position: fixed; inset: 0; background: rgba(18,18,18,.55); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+.modal-overlay.hidden { display: none; }
+
+.modal {
+  background: var(--white); border: 2px solid var(--ink);
+  border-radius: 0; width: 100%; max-width: 440px; padding: 26px 26px 22px;
+  max-height: 90vh; overflow: auto;
+}
+
+.modal h2 {
+  font-family: 'Space Grotesk', sans-serif; font-size: 24px; margin: 0 0 4px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: -.5px;
+}
+
+.modal .rule.accent { margin-bottom: 16px; }
+.field { margin-bottom: 15px; }
+
+.field label {
+  display: block; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--grey); margin-bottom: 5px;
+}
+
+.field input[type=text], .field textarea, .field input[type=time] {
+  width: 100%; font-family: 'Inter', sans-serif; font-size: 14.5px;
+  border: 2px solid var(--ink); border-radius: 0;
+  background: var(--white); padding: 8px 9px; color: var(--ink);
+}
+
+.field textarea { resize: vertical; min-height: 44px; }
+.time-row { display: flex; gap: 12px; }
+.time-row .field { flex: 1; }
+
+.day-picker { display: flex; gap: 0; flex-wrap: wrap; border: 2px solid var(--ink); border-left: none; width: fit-content; }
+.day-chip {
+  border-left: 2px solid var(--ink); width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center; font-size: 12px;
+  cursor: pointer; background: var(--white); font-family: 'IBM Plex Mono', monospace; font-weight: 600;
+}
+
+.day-chip.active { background: var(--ink); color: var(--white); }
+.color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-dot { width: 30px; height: 30px; border-radius: 0; border: 2px solid var(--ink); cursor: pointer; position: relative; }
+.color-dot.active::after { content: "\2713"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; }
+
+.modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+.modal-actions .left { display: flex; gap: 8px; flex-wrap: wrap; }
+.modal-actions .right { display: flex; gap: 8px; flex-wrap: wrap; }
+.hint-small { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--grey); margin-top: -6px; margin-bottom: 10px; }
+
+/* ---------- Mobile Responsiveness ---------- */
+@media (max-width: 768px) {
+  /* Reclaim screen real estate by reducing outer padding */
+  #app { 
+    padding: 16px 12px 24px; 
+  }
+  
+  /* Scale down header for smaller screens */
+  .banner h1 { 
+    font-size: 36px; 
+  }
+  
+  /* Ensure toolbar buttons span full width or wrap cleanly */
+  .toolbar {
+    margin: 12px 0 4px;
+    gap: 8px;
+  }
+  
+  button.sketch-btn {
+    flex: 1 1 auto; /* Allows buttons to stretch to fill empty space */
+    text-align: center;
+    margin-right: 0;
+  }
+  
+  /* Compress the time gutter so days have more room */
+  .time-gutter {
+    width: 50px;
+    flex: 0 0 50px;
+  }
+  
+  .time-label .clock {
+    font-size: 10px; /* Prevent long times like 10:00 PM from wrapping awkwardly */
+    left: 2px;
+  }
+  
+  /* Give day columns a slightly larger minimum width to ensure task text is readable */
+  .day-col { 
+    min-width: 120px; 
+  }
+
+  /* Make sure modal handles virtual keyboards well on mobile */
+  .modal-overlay {
+    padding: 0; /* Remove overlay padding so modal can touch edges */
+    align-items: flex-end; /* Bring modal to bottom to avoid keyboard covering it */
+  }
+
+  .modal {
+    max-width: 100%;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    max-height: 85vh; /* Keep some overlay visible at top */
+    padding: 20px 16px;
+  }
+  
+  /* Stack time inputs in the modal so they don't get squished */
+  .time-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .time-row .field { margin-bottom: 12px; }
+
+  /* Stack modal actions to ensure touch targets are large enough */
+  .modal-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .modal-actions .left, 
+  .modal-actions .right {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .modal-actions button {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+}

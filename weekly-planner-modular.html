@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>weekly grid — modular planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <div class="eyebrow">NO ACCOUNT NEEDED / Saved in Browser</div>
+  <div class="banner">
+    <div>
+      <h1>weekly <span>grid</span></h1>
+    </div>
+    <div class="toolbar">
+      <button class="sketch-btn primary" id="addBtn">+ Add Task</button>
+      <button class="sketch-btn ghost" id="clearBtn">Clear Board</button>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="board-wrap">
+    <div class="grid" id="grid"></div>
+  </div>
+
+</div>
+
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">New Task</h2>
+    <form id="taskForm">
+      <div class="field">
+        <label>Task</label>
+        <input type="text" id="f-title" placeholder="e.g. Deep work, Gym, Client call" required>
+      </div>
+
+      <div class="field" id="dayPickerWrap">
+        <label id="dayPickerLabel">Day(s) — select multiple to repeat</label>
+        <div class="day-picker" id="dayPicker"></div>
+      </div>
+
+      <div class="time-row">
+        <div class="field">
+          <label>Start</label>
+          <input type="time" id="f-start" required>
+        </div>
+        <div class="field">
+          <label>End</label>
+          <input type="time" id="f-end" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Color</label>
+        <div class="color-picker" id="colorPicker"></div>
+      </div>
+
+      <div class="field">
+        <label>Notes</label>
+        <textarea id="f-notes" placeholder="optional detail..."></textarea>
+      </div>
+
+      <div id="seriesHint" class="hint-small" style="display:none;"></div>
+
+      <div class="modal-actions">
+        <div class="left" id="deleteZone"></div>
+        <div class="right">
+          <button type="button" class="sketch-btn ghost" id="cancelBtn">Cancel</button>
+          <button type="submit" class="sketch-btn primary" id="saveBtn">Save</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
