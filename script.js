@@ -186,7 +186,7 @@ function render(){
     if(body){
         const hint = document.createElement('div');
         hint.className = 'empty-hint';
-        hint.textContent = 'NO ENTRIES — TAP "ADD TASK" TO BEGIN';
+        hint.textContent = 'Double click or "ADD TASK" to begin';
         body.appendChild(hint);
     }
     }
