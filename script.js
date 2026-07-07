@@ -425,19 +425,36 @@ function closeModal(){ overlay.classList.add('hidden'); editingTask = null; }
 
 function openSettings(){
   const start = prompt("Start hour (0-23)", START_HOUR);
+  if(start === null) return;
+
   const end = prompt("End hour (1-24)", END_HOUR);
+  if(end === null) return;
 
   const days = prompt(
     "Days to show separated by commas\nExample: Mon,Tue,Wed",
     DAYS.join(',')
   );
+  if(days === null) return;
 
   START_HOUR = Number(start);
   END_HOUR = Number(end);
   DAYS = days.split(',').map(x=>x.trim());
 
+  if(
+  isNaN(START_HOUR) ||
+  isNaN(END_HOUR) ||
+  START_HOUR < 0 ||
+  END_HOUR > 24 ||
+  START_HOUR >= END_HOUR ||
+  DAYS.length === 0
+){
+  alert("Invalid settings");
+  return;
+}
+
   saveSettings();
 
+  updateRowHeight();
   buildGrid();
   render();
 }
